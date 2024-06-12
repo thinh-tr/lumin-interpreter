@@ -1,24 +1,22 @@
 const std = @import("std");
+const argsAlloc = std.process.argsAlloc;
+const stdout = std.io.getStdOut().writer();
 
 pub fn main() !void {
-    // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
-    std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
+    const args = try argsAlloc(std.heap.page_allocator);    // Nhận vào args từ console
+    defer std.heap.page_allocator.free(args);   // Giải phóng args khỏi bộ nhớ
 
-    // stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    const stdout_file = std.io.getStdOut().writer();
-    var bw = std.io.bufferedWriter(stdout_file);
-    const stdout = bw.writer();
+    // Xuất ra thông tin đối số
+    // for (args, 0..) |arg, i| {
+    //     try stdout.print("Arg {}: {s}\n", .{i, arg});
+    // }
 
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
-
-    try bw.flush(); // don't forget to flush!
-}
-
-test "simple test" {
-    var list = std.ArrayList(i32).init(std.testing.allocator);
-    defer list.deinit(); // try commenting this out and see if zig detects the memory leak!
-    try list.append(42);
-    try std.testing.expectEqual(@as(i32, 42), list.pop());
+    if (args.len > 1) {
+        try stdout.writeAll("Usage: lumin [script]");
+        std.process.exit(64);
+    } else if (args.len == 1) {
+        // run file function
+    } else {
+        // run prompt
+    }
 }
