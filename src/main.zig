@@ -3,7 +3,6 @@ const argsAlloc = std.process.argsAlloc;
 const stdout = std.io.getStdOut().writer();
 const page_allocator = std.heap.page_allocator;
 const fs = std.fs; // Filesystem
-const FileOpenError = std.fs.File.OpenError;
 
 pub fn main() !void {
     const args: [][]u8 = try argsAlloc(std.heap.page_allocator); // Nhận vào args từ console
@@ -48,7 +47,7 @@ pub fn reportError(message: []u8) !void {
 pub fn runFile(path: []const u8) !void {
     const source_file: fs.File = fs.openFileAbsolute(path, .{ .mode = .read_only }) catch |err| {
         try reportError(try std.fmt.allocPrint(page_allocator, "{!}", .{err}));
-        return;
+        return; // Thoát hàm
     };
     const source_content: ?[]u8 = try source_file.readToEndAlloc(page_allocator, std.math.maxInt(usize));
     defer page_allocator.free(source_content.?);
