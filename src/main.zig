@@ -1,12 +1,11 @@
 const std = @import("std");
-const argsAlloc = std.process.argsAlloc;
 const stdout = std.io.getStdOut().writer();
 const page_allocator = std.heap.page_allocator;
-const fs = std.fs; // Filesystem
+const File = std.fs.File;   // File type
 
 pub fn main() !void {
-    const args: [][]u8 = try argsAlloc(std.heap.page_allocator); // Nhận vào args từ console
-    defer std.heap.page_allocator.free(args); // Giải phóng args khỏi bộ nhớ
+    const args = try std.process.argsAlloc(std.heap.page_allocator); // Nhận vào args từ console
+    defer std.process.argsFree(page_allocator, args);
 
     try stdout.writeAll("Usage: lumin [command] [options]\n");
 
@@ -45,7 +44,8 @@ pub fn reportError(message: []u8) !void {
 
 // Thực thi source code nằm tại path nhất định
 pub fn runFile(path: []const u8) !void {
-    const source_file: fs.File = fs.openFileAbsolute(path, .{ .mode = .read_only }) catch |err| {
+    // Phương thức open file theo đường dẫn tương đối sử dụng cwd()
+    const source_file: File = std.fs.cwd().openFile(path, File.OpenFlags{ .mode = .read_only }) catch |err| {
         try reportError(try std.fmt.allocPrint(page_allocator, "{!}", .{err}));
         return; // Thoát hàm
     };
