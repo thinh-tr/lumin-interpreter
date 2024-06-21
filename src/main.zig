@@ -13,11 +13,18 @@ pub fn main() !void {
     if (args.len == 1) {
         // Hiển thị help-menu khi không có arg đầu vào
         try showHelpMenu();
-    } else if (args.len >= 3) {
+    } else if (args.len >= 2) {
         // Trường hợp có command đầu vào -> Kiểm tra command đầu vào đó
         if (std.mem.eql(u8, args[1], "run")) {
-            // Lệnh run -> tiến hành phân tích và thực thi mã
-            try runFile(args[2]);
+            // Kiểm tra điều kiện lệnh có độ dài từ 3 tham số trở lên
+            if (args.len >= 3) {
+                // Lệnh run -> tiến hành phân tích và thực thi mã
+                try runFile(args[2]);
+            } else {
+                // Trường hợp không nhận được tham số thứ 3
+                try reportError(try std.fmt.allocPrint(page_allocator, "Source file is not specified.", .{}));
+                std.process.exit(64);
+            }
         } else if (std.mem.eql(u8, args[1], "help")) {
             // Lệnh help -> hiển thị help menu
             try showHelpMenu();
@@ -25,7 +32,7 @@ pub fn main() !void {
             // Trường hợp không nhận ra command này
             try reportError(try std.fmt.allocPrint(page_allocator, "unknown command '{s}'", .{args[1]}));
         }
-    }
+    } else std.process.exit(64);
 }
 
 // Hiển thị menu trợ giúp
