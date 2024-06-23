@@ -38,6 +38,9 @@ pub const TokenType = enum {
     SLASH_EQUAL,    // `/=`
     PERCENT_EQUAL,  // `%=`
 
+    AND_AND,    // `AND logic (&&)`
+    VERDASH_VERDASH, // `OR logic (||)`
+
 
     // Literals
     IDENTIFIER, // Định danh
@@ -47,8 +50,6 @@ pub const TokenType = enum {
 
 
     // Từ khoá
-    AND,    // `AND logic`
-    OR, // `OR logic`
     IN, // `in`
     FUNC,   // `function`
     IF, // `if`
