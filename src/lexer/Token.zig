@@ -9,7 +9,7 @@ pub const Token = struct {
 
     const Self = @This();
 
-    // init func
+    // Khởi tạo token
     pub fn init(token_type: TokenType, lexeme: []u8, line: i128) Token {
         return Token{
             .token_type = token_type,

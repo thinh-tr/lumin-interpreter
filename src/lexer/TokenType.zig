@@ -18,6 +18,8 @@ pub const TokenType = enum {
     SLASH, // `/`
     PERCENT,    // `%`
 
+    REVERSED_SLASH, // `\`
+
 
     // Token có từ 1 đến 2 ký tự
     BANG, // `!`
@@ -44,9 +46,10 @@ pub const TokenType = enum {
 
     // Literals
     IDENTIFIER, // Định danh
-    STRING, // String literal
-    NUMBER, // Number literal
-    TYPE,   // Type literal
+    STRING_LITERAL, // String literal
+    CHAR_LITERAL,   // Character literal
+    NUMBER_LITERAL, // Number literal
+    TYPE_LITERAL,   // Type literal
 
 
     // Từ khoá
@@ -66,6 +69,9 @@ pub const TokenType = enum {
     CLASS,  // `class`
     PROTOCOL,   // `protocol`
     STRUCT, // `struct`
+    UNION,  // `union`
+    ERROR,  // `error`
+    ENUM,   // `enum`
 
     NULL,   // `null`
     TRUE,   // `true`
