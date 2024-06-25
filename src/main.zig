@@ -1,7 +1,7 @@
 const std = @import("std");
 const stdout = std.io.getStdOut().writer();
 const page_allocator = std.heap.page_allocator;
-const File = std.fs.File;   // File type
+const File = std.fs.File; // File type
 
 pub fn main() !void {
     const args = try std.process.argsAlloc(std.heap.page_allocator); // Nhận vào args từ console
@@ -15,7 +15,7 @@ pub fn main() !void {
         try showHelpMenu();
     } else if (args.len >= 2) {
         // Trường hợp có command đầu vào -> Kiểm tra command đầu vào đó
-        if (std.mem.eql(u8, args[1], "run")) {
+        if (InputCommand.getCommand(args[1]) == InputCommand.RUN) {
             // Kiểm tra điều kiện lệnh có độ dài từ 3 tham số trở lên
             if (args.len >= 3) {
                 // Lệnh run -> tiến hành phân tích và thực thi mã
@@ -25,15 +25,37 @@ pub fn main() !void {
                 try reportError(try std.fmt.allocPrint(page_allocator, "Source file is not specified.", .{}));
                 std.process.exit(64);
             }
-        } else if (std.mem.eql(u8, args[1], "help")) {
+        } else if (InputCommand.getCommand(args[1]) == InputCommand.HELP) {
             // Lệnh help -> hiển thị help menu
             try showHelpMenu();
         } else {
             // Trường hợp không nhận ra command này
             try reportError(try std.fmt.allocPrint(page_allocator, "unknown command '{s}'", .{args[1]}));
         }
-    } else std.process.exit(64);
+    } else std.process.exit(64); // Thoát chương trình khi không có args nào được truyển vào
 }
+
+// Enum chứa các command được hỗ trợ
+const InputCommand = enum {
+    RUN, // run script
+    HELP, // help menu
+    UNSUPPORTED, // unsupported command
+
+    const Self = @This();
+
+    // Quy đổi command đầu vào sang kiểu string
+    pub fn getCommand(string_arg_command: []const u8) InputCommand {
+        if (std.mem.eql(u8, string_arg_command, "run")) {
+            // run command
+            return InputCommand.RUN;
+        } else if (std.mem.eql(u8, string_arg_command, "help")) {
+            // help command
+            return InputCommand.HELP;
+        } else {
+            return InputCommand.UNSUPPORTED;
+        }
+    }
+};
 
 // Hiển thị menu trợ giúp
 pub fn showHelpMenu() !void {
