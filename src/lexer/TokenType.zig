@@ -18,7 +18,8 @@ pub const TokenType = enum {
     SLASH, // `/`
     PERCENT,    // `%`
 
-    REVERSED_SLASH, // `\`
+    LEFT_SQUARE_BRACKET,    // `[`
+    RIGHT_SQUARE_BRACKET,   // `]`
 
 
     // Token có từ 1 đến 2 ký tự
@@ -40,9 +41,6 @@ pub const TokenType = enum {
     SLASH_EQUAL,    // `/=`
     PERCENT_EQUAL,  // `%=`
 
-    AND_AND,    // `AND logic (&&)`
-    VERDASH_VERDASH, // `OR logic (||)`
-
 
     // Literals
     IDENTIFIER, // Định danh
@@ -60,6 +58,9 @@ pub const TokenType = enum {
     FOR,    // `for`
     WHILE,  // `while`
     DO, // `do`
+
+    AND,    // `And logic`
+    OR, // `Or logic`
 
     VAR,    // `var`
     CONST,  // `constant`

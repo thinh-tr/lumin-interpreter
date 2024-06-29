@@ -1,10 +1,11 @@
 const std = @import("std");
 const stdout = std.io.getStdOut().writer();
 const page_allocator = std.heap.page_allocator;
+const GeneralPurposeAllocator = std.heap.GeneralPurposeAllocator;
 const File = std.fs.File; // File type
 
 pub fn main() !void {
-    const args = try std.process.argsAlloc(std.heap.page_allocator); // Nhận vào args từ console
+    const args = try std.process.argsAlloc(page_allocator); // Nhận vào args từ console
     defer std.process.argsFree(page_allocator, args);
 
     try stdout.writeAll("Usage: lumin [command] [options]\n");
