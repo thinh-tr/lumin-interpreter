@@ -15,10 +15,17 @@ pub fn scanTokens(source: []const u8) !ArrayList(Token) {
     var current_line: u128 = 1;
     // Vòng lặp kiểm tra
     while (current_i < source.len) : (current_i += added_token_length) {
+        // Tăng số dòng và nhảy sang vòng lặp mới nếu gặp ký tự 
         if (source[current_i] == '\n') {
             current_line += 1;
             added_token_length = 1;
             continue;   // Nhảy vòng lặp sang bước kế tiếp
+        }
+
+        // Bỏ qua kí tự whitespace và nhảy sang vòng lặp tiếp theo
+        if (source[current_i] == ' ') {
+            added_token_length = 1;
+            continue;
         }
 
         // Lần lượt kiểm tra các ký tự
@@ -167,9 +174,24 @@ pub fn scanTokens(source: []const u8) !ArrayList(Token) {
                 added_token_length = token.lexeme.len;
             },
 
+            // Bắt đầu xét các trường hợp như từ khoá, literal hoặc các trường hợp khác
             else => {
-                try reportUnexpectedToken(source[current_i], current_line);
-                return tokens;
+                if (std.ascii.isAlphabetic(source[current_i])) {
+                // Kiểm tra nếu ký tự bắt đầu bằng chữ cái (mà không bắt đầu bằng chữ số) -> Token có khả năng là IDENTIFIER hoặc KEYWORD
+                    var next_i: usize = current_i;
+                    // Vòng lặp rà soát cho đến khi gặp phải ký tự không phải chữ cái hoặc chữ số
+                    while (std.ascii.isAlphanumeric(source[next_i])) {
+                        next_i += 1;    // tăng next_i lên 1
+                    }
+                    // Lấy ra string từ vị trí current_i đến next_i (cần loại bỏ các whitespace ở đầu và cuối của literal nếu có)
+                    const literal: []const u8 = source[current_i..next_i];  // chỉ tính đến next_i (char ở next_i - 1)
+                    const token: Token = Token.init(TokenType.defineTypeOfAlphabeticToken(literal), literal, current_line);
+                    try tokens.append(token);
+                    added_token_length = literal.len;
+                } else {
+                    try reportUnexpectedToken(source[current_i], current_line);
+                    return tokens;
+                }
             }
         }
     }
@@ -184,19 +206,10 @@ fn reportUnexpectedToken(char: u8, line: u128) !void {
 
 test "testing scanTokens function" {
     const tokens: ArrayList(Token) = try scanTokens(
-        \\(){}
-        \\,.
-        \\:;
-        \\[]
-        \\!=!!=
-        \\===
-        \\>>=>
-        \\<<=<
-        \\++=+
-        \\--=-
-        \\**=*
-        \\//=/
-        \\%%=%
+        \\protocol Info {
+        \\  func getInfo(): Info;
+        \\  func rereiveUserId(): UserID;
+        \\}
     );
 
     defer tokens.deinit();

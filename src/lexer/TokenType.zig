@@ -1,4 +1,4 @@
-const ArrayList = @import("std").ArrayList;
+const std = @import("std");
 
 pub const TokenType = enum {
     // Tokens một ký tự
@@ -46,7 +46,6 @@ pub const TokenType = enum {
     STRING_LITERAL, // String literal
     CHAR_LITERAL, // Character literal
     NUMBER_LITERAL, // Number literal
-    TYPE_LITERAL, // Type literal
 
     // Từ khoá
     IN, // `in`
@@ -77,6 +76,7 @@ pub const TokenType = enum {
     FALSE, // `false`
 
     RETURN, // `return`
+
 
     // Độ dài của các token 1 ký tự
     pub const LEFT_PATEN_LENGTH: usize = 1;
@@ -114,46 +114,56 @@ pub const TokenType = enum {
     pub const SLASH_EQUAL_LENGTH: usize = 2; // `/=`
     pub const PERCENT_EQUAL_LENGTH: usize = 2; // `%=`
 
-
-    // Độ dài của các từ khoá
-    pub const IN_LENGTH: usize = 2; // `in`
-    pub const FUNC_LENGTH: usize = 4; // `function`
-    pub const IF_LENGTH: usize = 2; // `if`
-    pub const ELSE_LENGTH: usize = 4; // `else`
-    pub const FOR_LENGTH: usize = 3; // `for`
-    pub const WHILE_LENGTH: usize = 5; // `while`
-    pub const DO_LENGTH: usize = 2; // `do`
-
-    pub const AND_LENGTH: usize = 3; // `And logic`
-    pub const OR_LENGTH: usize = 2; // `Or logic`
-
-    pub const VAR_LENGTH: usize = 3; // `var`
-    pub const CONST_LENGTH: usize = 5; // `constant`
-
-    pub const THIS_LENGTH: usize = 4; // `this`
-
-    pub const CLASS_LENGTH: usize = 5; // `class`
-    pub const PROTOCOL_LENGTH: usize = 8; // `protocol`
-    pub const STRUCT_LENGTH: usize = 6; // `struct`
-    pub const UNION_LENGTH: usize = 5; // `union`
-    pub const ERROR_LENGTH: usize = 5; // `error`
-    pub const ENUM_LENGTH: usize = 4; // `enum`
-
-    pub const NULL_LENGTH: usize = 4; // `null`
-    pub const TRUE_LENGTH: usize = 4; // `true`
-    pub const FALSE_LENGTH: usize = 5; // `false`
-
-    pub const RETURN_LENGTH: usize = 6; // `return`
-
-    // Tất cả các hàm dưới đây đều bắt đầu kiểm tra từ ký tự thứ 2 trở đi cho mỗi trường hợp cần được xác định
-    // Kiểm tra khi gặp ký tự `!`
-    pub fn checkBANG_EQUAL(source: []const u8, position: usize) bool {
-        if (position + 1 < source.len and source[position] == '=') return true;
-        return false;
-    }
-
-    pub fn checkEQUAL_EQUAL(source: []const u8, position: usize) bool {
-        if (position + 1 < source.len and source[position] == '=') return true;
-        return false;
+    
+    // Hàm kiểm tra nếu Token là keyword
+    pub fn defineTypeOfAlphabeticToken(literal: []const u8) TokenType {
+        if (std.mem.eql(u8, literal, "in")) {
+            return TokenType.IN;
+        } else if (std.mem.eql(u8, literal, "func")) {
+            return TokenType.FUNC;
+        } else if (std.mem.eql(u8, literal, "if")) {
+            return TokenType.IF;
+        } else if (std.mem.eql(u8, literal, "else")) {
+            return TokenType.ELSE;
+        } else if (std.mem.eql(u8, literal, "for")) {
+            return TokenType.FOR;
+        } else if (std.mem.eql(u8, literal, "while")) {
+            return TokenType.WHILE;
+        } else if (std.mem.eql(u8, literal, "do")) {
+            return TokenType.DO;
+        } else if (std.mem.eql(u8, literal, "and")) {
+            return TokenType.AND;
+        } else if (std.mem.eql(u8, literal, "or")) {
+            return TokenType.OR;
+        } else if (std.mem.eql(u8, literal, "var")) {
+            return TokenType.VAR;
+        } else if (std.mem.eql(u8, literal, "const")) {
+            return TokenType.CONST;
+        } else if (std.mem.eql(u8, literal, "this")) {
+            return TokenType.THIS;
+        } else if (std.mem.eql(u8, literal, "class")) {
+            return TokenType.CLASS;
+        } else if (std.mem.eql(u8, literal, "protocol")) {
+            return TokenType.PROTOCOL;
+        } else if (std.mem.eql(u8, literal, "struct")) {
+            return TokenType.STRUCT;
+        } else if (std.mem.eql(u8, literal, "union")) {
+            return TokenType.UNION;
+        } else if (std.mem.eql(u8, literal, "error")) {
+            return TokenType.ERROR;
+        } else if (std.mem.eql(u8, literal, "enum")) {
+            return TokenType.ENUM;
+        } else if (std.mem.eql(u8, literal, "null")) {
+            return TokenType.NULL;
+        } else if (std.mem.eql(u8, literal, "true")) {
+            return TokenType.TRUE;
+        } else if (std.mem.eql(u8, literal, "false")) {
+            return TokenType.FALSE;
+        } else if (std.mem.eql(u8, literal, "return")) {
+            return TokenType.RETURN;
+        } else {
+            // Nếu literal không phải bất kỳ từ khoá nào thì sẽ được xác định là indentifier
+            return TokenType.IDENTIFIER;
+        }
     }
 };
