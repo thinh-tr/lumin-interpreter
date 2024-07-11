@@ -77,7 +77,6 @@ pub const TokenType = enum {
 
     RETURN, // `return`
 
-
     // Độ dài của các token 1 ký tự
     pub const LEFT_PATEN_LENGTH: usize = 1;
     pub const RIGHT_PATEN_LENGTH: usize = 1;
@@ -114,7 +113,6 @@ pub const TokenType = enum {
     pub const SLASH_EQUAL_LENGTH: usize = 2; // `/=`
     pub const PERCENT_EQUAL_LENGTH: usize = 2; // `%=`
 
-    
     // Hàm kiểm tra nếu Token là keyword
     pub fn defineTypeOfAlphabeticToken(literal: []const u8) TokenType {
         if (std.mem.eql(u8, literal, "in")) {

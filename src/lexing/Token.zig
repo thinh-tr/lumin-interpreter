@@ -1,8 +1,6 @@
-const std = @import("std");
 const TokenType = @import("./TokenType.zig").TokenType;
-const stdout = std.io.getStdOut().writer();
 
-// Struct chứa thông tin Token
+// Struct mô hình hoá thông tin Token
 pub const Token = struct {
     token_type: TokenType,
     lexeme: []const u8,
@@ -19,4 +17,3 @@ pub const Token = struct {
         };
     }
 };
-
