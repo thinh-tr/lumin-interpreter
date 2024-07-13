@@ -200,6 +200,31 @@ pub const Lexer = struct {
                             added_token_length = token.lexeme.len;
                         },
 
+                        // Trường hợp bắt đầu bằng `'` -> Có thể là character literallitera
+                        '\'' => {
+                            // Duyệt và tìm char `'` tiếp theo
+                            var next_i: usize = current_i + 1;
+                            while (next_i < line.len and line[next_i] != '\'') {
+                                next_i += 1;    // Tăng next_i lên 1 nếu vẫn còn torng phạm vi của len và chưa tìm được `'`
+                            }
+                            // Kiểm tra sau khi đã thoát vòng lặp
+                            // Trường hợp không tìm được
+                            if (next_i == line.len) {
+                                try reportLexecalError(LexecalError.IlligalCharacterLiteral, line_i + 1, line, line[current_i]);
+                                return LexecalError.IlligalCharacterLiteral;
+                            }
+                            // Trường hợp đã tìm được `'`
+                            const literal: []const u8 = line[current_i..next_i + 1];
+                            if (literal.len == 3) {
+                                const token: Token = Token.init(TokenType.CHAR_LITERAL, literal, line_i + 1);
+                                try self.*.tokens.append(token);
+                                added_token_length = token.lexeme.len;
+                            } else {
+                                try reportLexecalError(LexecalError.IlligalCharacterLiteral, line_i + 1, line, line[current_i]);
+                                return LexecalError.IlligalCharacterLiteral;
+                            }
+                        },
+
                         // Bắt đầu xét các trường hợp như từ khoá, literal hoặc các trường hợp khác
                         else => {
                             try reportLexecalError(LexecalError.UndefinedToken, line_i + 1, line, line[current_i]);
@@ -213,7 +238,7 @@ pub const Lexer = struct {
 
     // Hàm báo lỗi không thể xác định được token
     fn reportLexecalError(err: LexecalError, line: u128, str_line: []const u8, char: u8) !void {
-        try stdout.print("Error '{!}' at line {}: {s} -> character '{c}'\n", .{ err, line, str_line, char });
+        try stdout.print("Error `{!}` at line {}:\n\t{s}\n\t(error at: `{c}`)\n", .{ err, line, str_line, char });
     }
 };
 
@@ -224,20 +249,9 @@ test "testing scanTokens function" {
     defer lexer.deinit();
 
     try lexer.scanLines(
-        \\
-        \\()
-        \\{}
-        \\,.:;
-        \\[]
-        \\!!=
-        \\===
-        \\>>=
-        \\<<=
-        \\++=
-        \\--=
-        \\**=
-        \\//=
-        \\%%=
+        \\'c';
+        \\'d''e';
+        \\'f;
     );
 
     try lexer.scanTokens();
