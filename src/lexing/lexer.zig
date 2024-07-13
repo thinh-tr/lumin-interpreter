@@ -2,7 +2,7 @@ const std = @import("std");
 const stdout = std.io.getStdOut().writer();
 const ascii = std.ascii;
 const ArrayList = std.ArrayList;
-const LexecalError = @import("./LexecalError.zig").LexingError;
+const LexecalError = @import("./LexecalError.zig").LexecalError;
 const Token = @import("./Token.zig").Token;
 const TokenType = @import("./TokenType.zig").TokenType;
 
@@ -251,7 +251,7 @@ test "testing scanTokens function" {
     try lexer.scanLines(
         \\'c';
         \\'d''e';
-        \\'f;
+        \\'f';
     );
 
     try lexer.scanTokens();
