@@ -52,8 +52,14 @@ pub const Lexer = struct {
             for (self.*.lines.items, 0..) |line, line_i| {
                 var current_i: usize = 0;
                 var added_token_length: usize = 0;
+
                 // Tuần tự xét qua tất cả các ký tự có trong line hiện tại
                 while (current_i < line.len) : (current_i += added_token_length) {
+                    // Nếu gặp ký tự là khoản trắng thì nhảy sang vòng lặp mới
+                    if (line[current_i] == ' ') {
+                        added_token_length = 1;
+                        continue;
+                    }
                     // Lần lượt kiểm tra các ký tự
                     switch (line[current_i]) {
                         // `()`
@@ -205,30 +211,78 @@ pub const Lexer = struct {
                             // Duyệt và tìm char `'` tiếp theo
                             var next_i: usize = current_i + 1;
                             while (next_i < line.len and line[next_i] != '\'') {
-                                next_i += 1;    // Tăng next_i lên 1 nếu vẫn còn torng phạm vi của len và chưa tìm được `'`
+                                next_i += 1; // Tăng next_i lên 1 nếu vẫn còn torng phạm vi của len và chưa tìm được `'`
                             }
                             // Kiểm tra sau khi đã thoát vòng lặp
                             // Trường hợp không tìm được
                             if (next_i == line.len) {
-                                try reportLexecalError(LexecalError.IlligalCharacterLiteral, line_i + 1, line, line[current_i]);
+                                try reportLexecalError(LexecalError.IlligalCharacterLiteral, line_i + 1, line, line[current_i], current_i);
                                 return LexecalError.IlligalCharacterLiteral;
                             }
                             // Trường hợp đã tìm được `'`
-                            const literal: []const u8 = line[current_i..next_i + 1];
+                            const literal: []const u8 = line[current_i .. next_i + 1];
                             if (literal.len == 3) {
                                 const token: Token = Token.init(TokenType.CHAR_LITERAL, literal, line_i + 1);
                                 try self.*.tokens.append(token);
                                 added_token_length = token.lexeme.len;
                             } else {
-                                try reportLexecalError(LexecalError.IlligalCharacterLiteral, line_i + 1, line, line[current_i]);
+                                try reportLexecalError(LexecalError.IlligalCharacterLiteral, line_i + 1, line, line[current_i], current_i);
                                 return LexecalError.IlligalCharacterLiteral;
                             }
                         },
 
+                        // Trường hợp bắt đầu bằng `"` -> Có thể là string literal
+                        '\"' => {
+                            var next_i: usize = current_i + 1;
+                            // Tăng next_i cho đến khi gặp được ký tự `"`
+                            while (next_i < line.len and line[next_i] != '\"') {
+                                next_i += 1;
+                            }
+                            // Trường hợp không tìm được `"`
+                            if (next_i == line.len) {
+                                try reportLexecalError(LexecalError.IllegalStringLiteral, line_i + 1, line, line[current_i], current_i);
+                                return LexecalError.IllegalStringLiteral;
+                            }
+                            // Trường hợp tìm được `"`
+                            const literal: []const u8 = line[current_i .. next_i + 1];
+                            const token: Token = Token.init(TokenType.STRING_LITERAL, literal, line_i + 1);
+                            try self.*.tokens.append(token);
+                            added_token_length = token.lexeme.len;
+                        },
+
                         // Bắt đầu xét các trường hợp như từ khoá, literal hoặc các trường hợp khác
                         else => {
-                            try reportLexecalError(LexecalError.UndefinedToken, line_i + 1, line, line[current_i]);
-                            return LexecalError.IlligalCharacterLiteral; // Trả ra lexecal error và kết thúc hàm
+                            if (std.ascii.isAlphabetic(line[current_i])) {
+                                // Trường hợp token bắt đầu bằng chữ cái (không phải chữ số) -> Có thể là identifier literal
+                                var next_i: usize = current_i + 1;
+                                while (next_i <= line.len - 1 and (std.ascii.isAlphanumeric(line[next_i]) or line[next_i] == '_')) {
+                                    next_i += 1;
+                                }
+                                const literal: []const u8 = line[current_i..next_i];
+                                const token: Token = Token.init(TokenType.defineTypeOfAlphabeticToken(literal), literal, line_i + 1);
+                                try self.*.tokens.append(token);
+                                added_token_length = token.lexeme.len;
+                            } else if (std.ascii.isDigit(line[current_i])) {
+                                // Trường hợp token bắt đầu bằng chữ số (hệ 10)
+                                var next_i: usize = current_i + 1;
+                                while (next_i < line.len and (std.ascii.isDigit(line[next_i]) or line[next_i] == '.' or line[next_i] == '_')) {
+                                    next_i += 1;
+                                }
+                                const literal: []const u8 = line[current_i..next_i];    // Lấy ra literal
+                                // Kiểm tra xem number literal có hợp lệ hay không
+                                if (TokenType.isValidNumberLiteral(literal)) {
+                                    const token: Token = Token.init(TokenType.NUMBER_LITERAL, literal, line_i + 1);
+                                    try self.*.tokens.append(token);
+                                    added_token_length = token.lexeme.len;
+                                } else {
+                                    try reportLexecalError(LexecalError.IllegalNumberLiteral, line_i + 1, line, line[current_i], current_i);
+                                    return LexecalError.IllegalNumberLiteral;
+                                }
+                            } else {
+                                // Trường hợp không thể nhận diện được token
+                                try reportLexecalError(LexecalError.UndefinedToken, line_i + 1, line, line[current_i], current_i);
+                                return LexecalError.UndefinedToken; // Trả ra lexecal error và kết thúc hàm
+                            }
                         },
                     }
                 }
@@ -237,8 +291,8 @@ pub const Lexer = struct {
     }
 
     // Hàm báo lỗi không thể xác định được token
-    fn reportLexecalError(err: LexecalError, line: u128, str_line: []const u8, char: u8) !void {
-        try stdout.print("Error `{!}` at line {}:\n\t{s}\n\t(error at: `{c}`)\n", .{ err, line, str_line, char });
+    fn reportLexecalError(err: LexecalError, line: u128, str_line: []const u8, char: u8, char_index: usize) !void {
+        try stdout.print("Error `{!}` at line {}:\n\t{s}\n\t(error at: `{c}` -> (index: {}))\n", .{ err, line, str_line, char, char_index });
     }
 };
 
@@ -249,9 +303,11 @@ test "testing scanTokens function" {
     defer lexer.deinit();
 
     try lexer.scanLines(
-        \\'c';
-        \\'d''e';
-        \\'f';
+        \\const index: UInt8 = _12.34_1;
+        \\while (index < 100) {
+        \\  index += 1;
+        \\}
+        \\println(index);
     );
 
     try lexer.scanTokens();
@@ -260,7 +316,9 @@ test "testing scanTokens function" {
         std.debug.print("{s}\n", .{line});
     }
 
+    std.debug.print("\n", .{});
+
     for (lexer.tokens.items) |token| {
-        std.debug.print("{}, '{s}', line: {}\n", .{ token.token_type, token.lexeme, token.line });
+        std.debug.print("{}, `{s}`, line: {}\n", .{ token.token_type, token.lexeme, token.line });
     }
 }
