@@ -45,7 +45,7 @@ pub const TokenType = enum {
     IDENTIFIER, // Định danh
     STRING_LITERAL, // String literal
     CHAR_LITERAL, // Character literal
-    NUMBER_LITERAL, // Number literal
+    NUMBER_LITERAL, // Integer literal
 
     // Từ khoá
     IN, // `in`
@@ -164,4 +164,85 @@ pub const TokenType = enum {
             return TokenType.IDENTIFIER;
         }
     }
+
+    // Hàm kiểm tra tính hợp lệ của number literal
+    pub fn isValidNumberLiteral(literal: []const u8) bool {
+        // Kiểm tra nếu chuỗi rỗng
+        if (literal.len == 0) return false;
+
+        var hasDot: bool = false;
+        var hasDigit: bool = false;
+
+        // Kiểm tra ký tự đầu tiên
+        if (!std.ascii.isDigit(literal[0])) {
+            return false;
+        }
+        // Kiểm tra tuần tự tất cả các ký tự
+        for (literal, 0..) |c, i| {
+            if (std.ascii.isDigit(c)) {
+                hasDigit = true;
+                continue;
+            }
+            
+            // Nếu gặp ký tự `.`
+            if (c == '.') {
+                if (hasDot) return false;   // Không được có nhiều hơn một dấu chấm
+                hasDot = true;
+                // Kiểm tra ký tự ở đầu và cuối dấu chấm
+                if (i == 0 or i == literal.len - 1) return false;
+                if (!std.ascii.isDigit(literal[i - 1]) or !std.ascii.isDigit(literal[i + 1])) {
+                    return false;
+                }
+            } else if (c == '_') {
+                // Kiểm tra để đảm bảo không có 2 ký tự liền kề nhau
+                if (i == 0 or i == literal.len - 1) return false;
+                const prev: u8 = literal[i - 1];
+                const next: u8 = literal[i + 1];
+                if (prev == '.' or prev == '_' or next == '.' or next == '_') {
+                    return false;
+                }
+            } else {
+                return false;   // Ký tự không hợp lệ
+            }
+        }
+        return hasDigit;
+    }
 };
+
+test "isValidNumberLiteral test" {
+    const valid_numbers = [_][]const u8{
+        "10000",
+        "10_000",
+        "10.3",
+        "10.30",
+        "1_000.00",
+        "1234567890",
+        "0.1",
+        "1.0_0_1",
+    };
+
+    const invalid_numbers = [_][]const u8{
+        "",
+        "10_.3",
+        "10._3",
+        "10.3_",
+        "10__00",
+        "_.10000",
+        "10000._",
+        ".10000",
+        "10000.",
+        "_10000",
+        "10000_",
+        "10..3",
+        "10.3__0",
+        "10.3.0",
+    };
+
+    for (valid_numbers) |num| {
+        try std.testing.expect(TokenType.isValidNumberLiteral(num));
+    }
+
+    for (invalid_numbers) |num| {
+        try std.testing.expect(!TokenType.isValidNumberLiteral(num));
+    }
+}
