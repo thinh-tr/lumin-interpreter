@@ -31,7 +31,7 @@ pub fn build(b: *std.Build) void {
 
     const exe = b.addExecutable(.{
         .name = "lumin",
-        .root_source_file = b.path("src/main.zig"),
+        .root_source_file = b.path("src/lumin.zig"),
         .target = target,
         .optimize = optimize,
     });
