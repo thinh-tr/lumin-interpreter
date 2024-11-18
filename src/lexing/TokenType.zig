@@ -39,6 +39,7 @@ pub const TokenType = enum {
     MINUS_EQUAL, // `-=`
     STAR_EQUAL, // `*=`
     SLASH_EQUAL, // `/=`
+    SLASH_SLASH,    // `//`
     PERCENT_EQUAL, // `%=`
 
     // Literals
@@ -107,10 +108,12 @@ pub const TokenType = enum {
     pub const STAR_LENGTH: usize = 1; // `*`
     pub const SLASH_LENGTH: usize = 1; // `/`
     pub const PERCENT_LENGTH: usize = 1; // `%`
+
     pub const PLUS_EQUAL_LENGTH: usize = 2; // `+=`
     pub const MINUS_EQUAL_LENGTH: usize = 2; // `-=`
     pub const STAR_EQUAL_LENGTH: usize = 2; // `*=`
     pub const SLASH_EQUAL_LENGTH: usize = 2; // `/=`
+    pub const SLASH_SLASH_LENGTH: usize = 2;    // `//`
     pub const PERCENT_EQUAL_LENGTH: usize = 2; // `%=`
 
     // Hàm kiểm tra nếu Token là keyword
