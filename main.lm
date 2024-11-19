@@ -1,0 +1,8 @@
+import std.io.console;
+import std.math;
+
+var number: Int8 = 0;
+do {
+    console.println(number);
+    number += 1;
+} while (number < 10);

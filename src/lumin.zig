@@ -48,7 +48,7 @@ pub fn main() !void {
 }
 
 // Enum chứa các command được hỗ trợ
-const InputCommand = enum {
+const InputCommand: type = enum {
     RUN, // run script
     HELP, // help menu
     UNSUPPORTED, // unsupported command
