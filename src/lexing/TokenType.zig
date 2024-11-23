@@ -1,5 +1,5 @@
 // TokenType enum (phân loại các kiểu token)
-pub const TokenType: type = enum {
+pub const TokenType = enum {
     // Từ khoá
     In, // `in`
     Func, // `function`

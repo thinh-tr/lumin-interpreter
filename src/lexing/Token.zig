@@ -1,7 +1,9 @@
+const std = @import("std");
+const StdOut = std.io.getStdOut().writer();
 const TokenType = @import("./token_type.zig").TokenType;
 
 // Struct lưu thông tin Token
-pub const Token: type = struct {
+pub const Token = struct {
     token_type: TokenType,  // Loại token
     lexeme: []const u8, // lexeme của token
     literal_value: ?LiteralValue,  // giá trị literal có thể có của token
@@ -17,6 +19,10 @@ pub const Token: type = struct {
             .line = line,
             .column = column,
         }; 
+    }
+
+    pub fn toString(self: @This()) !void {
+        try StdOut.print("Type: {any}, lexeme: {s}, value: {any}, line: {d}, column: {d}\n", .{self.token_type, self.lexeme, self.literal_value, self.line, self.column});
     }
 };
 
