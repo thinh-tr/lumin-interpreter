@@ -33,14 +33,14 @@ pub const TokenType = enum {
     Less, // `<`
     LessEqual, // `<=`
     Plus, // `+`
-    Minus, // `-`
-    Star, // `*`
-    Slash, // `/`
-    Percent, // `%`
     PlusEqual, // `+=`
+    Minus, // `-`
     MinusEqual, // `-=`
+    Star, // `*`
     StarEqual, // `*=`
+    Slash, // `/`
     SlashEqual, // `/=`
+    Percent, // `%`
     PercentEqual, // `%=`
 
     // Dấu phân tách (Delimeter)

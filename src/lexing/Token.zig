@@ -1,5 +1,5 @@
 const std = @import("std");
-const StdOut = std.io.getStdOut().writer();
+const stdout = std.io.getStdOut().writer();
 const TokenType = @import("./token_type.zig").TokenType;
 
 // Struct lưu thông tin Token
@@ -22,7 +22,7 @@ pub const Token = struct {
     }
 
     pub fn toString(self: @This()) !void {
-        try StdOut.print("Type: {any}, lexeme: {s}, value: {any}, line: {d}, column: {d}\n", .{self.token_type, self.lexeme, self.literal_value, self.line, self.column});
+        try stdout.print("Type: {any}, lexeme: \"{s}\", value: {any}, line: {d}, column: {d}\n", .{self.token_type, self.lexeme, self.literal_value, self.line, self.column});
     }
 };
 
@@ -31,6 +31,6 @@ pub const LiteralValue: type = union {
     int: i128,
     float: f128,
     boolean: bool,
-    str: []const u8,
+    string: []const u8,
     char: u8,
 };
