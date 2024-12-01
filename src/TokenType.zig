@@ -13,7 +13,6 @@ pub const TokenType = enum {
     Var, // `var`
     Const, // `constant`
     This, // `this`
-    Class, // `class`
     Struct, // `struct`
     Union, // `union`
     Error, // `error`
@@ -25,14 +24,15 @@ pub const TokenType = enum {
     ReturnError,    // 'return!'
 
     // Toán tử
+    Circumflex, // `^` (toán tử dành cho số mũ)
     Bang, // `!`
     BangEqual, // `!=`
     Equal, // `=`
     EqualEqual, // `==`
     Greater, // `>`
     GreaterEqual, // `>=`
-    Less, // `<`
-    LessEqual, // `<=`
+    Lesser, // `<`
+    LesserEqual, // `<=`
     Plus, // `+`
     PlusEqual, // `+=`
     Minus, // `-`
