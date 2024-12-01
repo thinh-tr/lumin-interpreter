@@ -54,7 +54,7 @@ pub const Lexer: type = struct {
                 '(' => {
                     try addToken(self, Token.init(
                         .LeftPaten,
-                        self.*.source[current..current + 1],
+                        self.*.source[start..current + 1],
                         null,
                         line,
                         column,
@@ -64,7 +64,7 @@ pub const Lexer: type = struct {
                 ')' => {
                     try addToken(self, Token.init(
                         .RightPaten,
-                        self.*.source[current..current + 1],
+                        self.*.source[start..current + 1],
                         null,
                         line,
                         column,
@@ -74,7 +74,7 @@ pub const Lexer: type = struct {
                 '{' => {
                     try addToken(self, Token.init(
                         .LeftBrace,
-                        self.*.source[current..current + 1],
+                        self.*.source[start..current + 1],
                         null,
                         line,
                         column,
@@ -84,7 +84,7 @@ pub const Lexer: type = struct {
                 '}' => {
                     try addToken(self, Token.init(
                         .RightBrace,
-                        self.*.source[current..current + 1],
+                        self.*.source[start..current + 1],
                         null,
                         line,
                         column,
@@ -94,7 +94,7 @@ pub const Lexer: type = struct {
                 ',' => {
                     try addToken(self, Token.init(
                         .Comma,
-                        self.*.source[current..current + 1],
+                        self.*.source[start..current + 1],
                         null,
                         line,
                         column,
@@ -104,7 +104,7 @@ pub const Lexer: type = struct {
                 '.' => {
                     try addToken(self, Token.init(
                         .Dot,
-                        self.*.source[current..current + 1],
+                        self.*.source[start..current + 1],
                         null,
                         line,
                         column,
@@ -114,7 +114,7 @@ pub const Lexer: type = struct {
                 ':' => {
                     try addToken(self, Token.init(
                         .Colon,
-                        self.*.source[current..current + 1],
+                        self.*.source[start..current + 1],
                         null,
                         line,
                         column,
@@ -124,7 +124,7 @@ pub const Lexer: type = struct {
                 ';' => {
                     try addToken(self, Token.init(
                         .Semicolon,
-                        self.*.source[current..current + 1],
+                        self.*.source[start..current + 1],
                         null,
                         line,
                         column,
@@ -134,7 +134,7 @@ pub const Lexer: type = struct {
                 '[' => {
                     try addToken(self, Token.init(
                         .LeftSquareBracket,
-                        self.*.source[current..current + 1],
+                        self.*.source[start..current + 1],
                         null,
                         line,
                         column,
@@ -144,13 +144,52 @@ pub const Lexer: type = struct {
                 ']' => {
                     try addToken(self, Token.init(
                         .RightSquareBracket,
-                        self.*.source[current..current + 1],
+                        self.*.source[start..current + 1],
                         null,
                         line,
                         column,
                     ));
                     column += 1;
                 },
+                
+                // Trường hợp là các toán tử
+                '!' => {
+                    const found_token: Token = if (expectNextChar(self, '='))
+                        Token.init(
+                            .BangEqual,
+                            self.*.source[start..current + 1],
+                            null,
+                            line,
+                            column,
+                        ) else Token.init(
+                            .Bang,
+                            self.*.source[start..current + 1],
+                            null,
+                            line,
+                            column,
+                        );
+                    try addToken(self, found_token);
+                    column += 1;
+                },
+                '=' => {
+                    const found_token: Token = if (expectNextChar(self, '='))
+                        Token.init(
+                            .EqualEqual,
+                            self.*.source[start..current + 1],
+                            null,
+                            line,
+                            column,
+                        ) else Token.init(
+                            .Equal,
+                            self.*.source[start..current + 1],
+                            null,
+                            line,
+                            column,
+                        );
+                    try addToken(self, found_token);
+                    column += 1;
+                },
+                
                 else => return LexecalError.UndefinedToken,
             }
         }
@@ -161,9 +200,14 @@ pub const Lexer: type = struct {
         return current >= self.*.source.len; // true -> nếu như đã ở cuối source
     }
 
-    // Hàm kiểm tra ký tự liền kề vị trí current (nếu vẫn chưa duyệt đến cuối source)
-    fn peekNextChar(self: *Self) ?u8 {
-        return if (current < self.*.source.len - 1) self.*.source[current + 1] else null;
+    // Hàm kiểm tra ký tự liền kề vị trí current (nếu vẫn chưa duyệt đến cuối source) nếu đúng với ký tự đang dự đoán thì sẽ tự tăng current lên 1
+    fn expectNextChar(self: *Self, expect_char: u8) bool {
+        if (current < self.*.source.len - 1 and self.*.source[current + 1] == expect_char) {
+            current += 1;
+            return true;
+        } else { 
+            return false;
+        }
     }
 
     // Hàm thêm token vừa tạo vào token list
@@ -193,7 +237,7 @@ pub const LexecalError: type = error{
 
 test "Lexer test" {
     const sample_source: []const u8 =
-        \\(){},.:;[]
+        \\=!===
     ;
 
     var lexer: Lexer = Lexer.init(std.testing.allocator, sample_source);

@@ -22,6 +22,7 @@ pub const TokenType = enum {
     True, // `true`
     False, // `false`
     Return, // `return`
+    ReturnError,    // 'return!'
 
     // Toán tử
     Bang, // `!`
