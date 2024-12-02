@@ -21,7 +21,7 @@ pub const TokenType = enum {
     True, // `true`
     False, // `false`
     Return, // `return`
-    ReturnError,    // 'return!'
+    Throw,    // 'return!'
 
     // Toán tử
     Circumflex, // `^` (toán tử dành cho số mũ)

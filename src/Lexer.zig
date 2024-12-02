@@ -5,6 +5,7 @@ const TokenType = @import("./TokenType.zig").TokenType;
 const Allocator = std.mem.Allocator;
 const stdout = std.io.getStdOut().writer();
 const ascii = std.ascii;
+const StaticStringMap = std.StaticStringMap;
 
 const Self: type = @This(); // Tham chiếu đến kiểu Lexer
 
@@ -40,9 +41,7 @@ pub fn scanToken(self: *Self) !void {
         // Bắt đầu kiểm tra
         switch (current_char) {
             // Nếu gặp phải khoảng trắng
-            ' ' => {
-                column += 1;
-            },
+            ' ' => {},  // Không hành động đối với khoảng trắng
 
             // Nếu gặp ký tự xuống dòng
             '\n' => {
@@ -156,9 +155,16 @@ pub fn scanToken(self: *Self) !void {
             },
             // Các trường hợp là các loại token khác như identifier keyword hoặc từ khoá
             else => {
-                if (ascii.isAlphabetic(self.*.source[current])) {
-                    // Trường hợp là chữ cái
-
+                if (ascii.isAlphabetic(self.*.source[current]) or self.*.source[current] == '_') {
+                    // Trường hợp là chữ cái hoặc dấu `_` -> duyệt literal đó cho đến khi gặp các char không phải chữ cái, gạch dưới `_` hoặc chữ số
+                    while (!isAtEnd(self) and ascii.isAlphanumeric(self.*.source[current]) or self.*.source[current] == '_') {
+                        current += 1;
+                    }
+                    // Lấy ra literal vừa duyệt
+                    const literal: []const u8 = self.*.source[start .. current];
+                    const token: Token = specifyAlphabeticToken(literal);
+                    try addToken(self, token);
+                    current -= 1;   // trừ current đi 1 để tránh làm mất token không phải Alphanumeric ở cuối dòng nếu có
                 } else if (ascii.isAlphanumeric(self.*.source[current])) {
                     // trường hợp là chữ số
                 } else {
@@ -202,50 +208,48 @@ fn moveCurrentToEndOfLine(self: *Self) void {
 }
 
 // Hàm xác định xem alphabetic token có phải là một trong các keyword của lumin hay không
-fn specifyAlphabeticToken(token_literal: []const u8) Token {
-    // Kiểm tra xem có phải keyword hay không
-
-    // `in`
-    if (std.mem.eql(u8, token_literal, "in")) return Token.init(
-        .In,
-        token_literal,
-        null,
-        line,
-        column,
-    );
-
-    // `func`
-    if (std.mem.eql(u8, token_literal, "func")) return Token.init(
-        .Func,
-        token_literal,
-        null,
-        line,
-        column,
-    );
-
-    // `if`
-    if (std.mem.eql(u8, token_literal, "if")) return Token.init(
-        .If,
-        token_literal,
-        null,
-        line,
-        column,
-    );
-
-    // `else`
-    if (std.mem.eql(u8, token_literal, "else")) return Token.init(
-        .Else,
-        token_literal,
-        null,
-        line,
-        column,
-    );
+fn specifyAlphabeticToken(literal: []const u8) Token {
+    // Kiểm tra xem có phải keyword hay không bằng cách duyệt qua keyword map
+    if (keywords_map.has(literal)) {
+        // Trường hợp tìm thấy keyword trùng với literal này -> khởi tạo và thêm token chứa kiểu của literal
+        return Token.init(keywords_map.get(literal).?, literal, null, line, column);
+    } else {
+        // Trường hợp không phải từ khoá thì tạo token định danh
+        return Token.init(.Identifier, literal, null, line, column);
+    }
 }
 
 // Báo cáo lỗi trong quá trình lexing (xuất ra dòng bị lỗi, chỉ ra cụ thể token đang bị lỗi)
 // fn reportLexecalError() !void {
 //     try stdout.
 // }
+
+// Map chứa key - value của tất cả keyword trong lumin
+const keywords_map: StaticStringMap(TokenType) = StaticStringMap(TokenType).initComptime(
+    .{
+        .{ "in", TokenType.In },
+        .{ "func", TokenType.Func },
+        .{ "if", TokenType.If },
+        .{ "else", TokenType.Else },
+        .{ "for", TokenType.For },
+        .{ "while", TokenType.While },
+        .{ "do", TokenType.Do },
+        .{ "and", TokenType.And },
+        .{ "or" , TokenType.Or },
+        .{ "var", TokenType.Var },
+        .{ "const", TokenType.Const },
+        .{ "this", TokenType.This },
+        .{ "struct", TokenType.This },
+        .{ "union", TokenType.Union },
+        .{ "error", TokenType.Error },
+        .{ "enum", TokenType.Enum },
+        .{ "null", TokenType.Null },
+        .{ "true", TokenType.True },
+        .{ "false", TokenType.False },
+        .{ "return", TokenType.Return },
+        .{ "throw", TokenType.Throw },
+    }
+);
 
 // Error set cho các lỗi có thể xuất hiện trong quá trình scan token
 pub const LexecalError: type = error{
@@ -257,9 +261,10 @@ pub const LexecalError: type = error{
 
 test "Lexer test" {
     const sample_source: []const u8 =
-        \\+-*/%
-        \\//[]
-        \\++//--
+        \\class A {
+        \\  var id: string;
+        \\  var age: int;
+        \\}
     ;
 
     var lexer: Self = Self.init(std.testing.allocator, sample_source);
@@ -269,4 +274,5 @@ test "Lexer test" {
     for (lexer.tokens.items) |token| {
         try token.toString();
     }
+
 }

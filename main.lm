@@ -1,7 +1,7 @@
 import std.io.console;
-import std.math;
+import std.Math;
 
-var number: Int8 = 0;
+var number: int = 0;
 do {
     console.println(number);
     number += 1;
