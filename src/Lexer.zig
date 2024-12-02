@@ -42,7 +42,6 @@ pub fn scanToken(self: *Self) !void {
         switch (current_char) {
             // Nếu gặp phải khoảng trắng
             ' ' => {},  // Không hành động đối với khoảng trắng
-
             // Nếu gặp ký tự xuống dòng
             '\n' => {
                 line += 1; // Tăng line lên 1
@@ -141,6 +140,9 @@ pub fn scanToken(self: *Self) !void {
                     try addToken(self, token);
                 } else if (expectNextChar(self, '/')) {
                     moveCurrentToEndOfLine(self); // Tăng current đến cuôí hàng, lúc này vòng lặp mới sẽ tự bắt đầu
+                } else if (expectNextChar(self, '*')) {
+                    // Trường hợp gặp phải char bắt đầu của ghi chú nhiều dòng
+                    try moveCurrentToCloseCommentCharsPair(self);   // di chuyển đến cặp ngoặc đóng comment, nếu không tìm thấy thì báo lỗi
                 } else {
                     const token: Token = Token.init(.Slash, self.*.source[start .. current + 1], null, line, column);
                     try addToken(self, token);
@@ -202,8 +204,27 @@ fn moveCurrentToEndOfLine(self: *Self) void {
     // Tăng biến current cho đến khi gặp được ký tự xuống dòng
     while (!isAtEnd(self)) : (current += 1) {
         if (self.*.source[current] == '\n') {
+            line += 1;  // Tăng số thứ tự dòng lên 1
             break;
         }
+    }
+}
+
+// Hàm tìm và chuyển nhanh đến cặp ký tự đóng comment `*/`
+fn moveCurrentToCloseCommentCharsPair(self: *Self) LexecalError!void {
+    while (!isAtEnd(self)) : (current += 1) {
+        // Khi đã tìm thấy cặp ngoặc đóng
+        if (self.*.source[current] == '*' and expectNextChar(self, '/')) {
+            // Thoát vòng lặp nếu tìm ra cặp đấu đóng comment
+            break;
+        }
+        // Khi tìm thấy ký tự xuống dòng -> reset lại line và column
+        if (self.*.source[current] == '\n') {
+            line += 1;
+            column = 0;
+        }
+    } else {
+        return LexecalError.UnterminatedComment;
     }
 }
 
@@ -239,7 +260,7 @@ const keywords_map: StaticStringMap(TokenType) = StaticStringMap(TokenType).init
         .{ "var", TokenType.Var },
         .{ "const", TokenType.Const },
         .{ "this", TokenType.This },
-        .{ "struct", TokenType.This },
+        .{ "struct", TokenType.Struct },
         .{ "union", TokenType.Union },
         .{ "error", TokenType.Error },
         .{ "enum", TokenType.Enum },
@@ -257,14 +278,12 @@ pub const LexecalError: type = error{
     IlligalCharacterLiteral, // Lỗi char literal không hợp lệ
     IllegalStringLiteral, // Lỗi string literal không hợp lệ
     IllegalNumberLiteral, // Lỗi number literal không hợp lệ
+    UnterminatedComment, // Lỗi comment nhiều dòng chưa được đóng /*...*/
 };
 
 test "Lexer test" {
     const sample_source: []const u8 =
-        \\class A {
-        \\  var id: string;
-        \\  var age: int;
-        \\}
+        \\ 
     ;
 
     var lexer: Self = Self.init(std.testing.allocator, sample_source);
