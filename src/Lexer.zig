@@ -171,6 +171,7 @@ pub fn scanToken(self: *Self) !void {
                     // trường hợp là chữ số
                 } else {
                     // Các trường hợp khác
+                    try reportLexecalError(self, "Undefined token");
                     return LexecalError.UndefinedToken;
                 }
             },
@@ -211,7 +212,7 @@ fn moveCurrentToEndOfLine(self: *Self) void {
 }
 
 // Hàm tìm và chuyển nhanh đến cặp ký tự đóng comment `*/`
-fn moveCurrentToCloseCommentCharsPair(self: *Self) LexecalError!void {
+fn moveCurrentToCloseCommentCharsPair(self: *Self) !void {
     while (!isAtEnd(self)) : (current += 1) {
         // Khi đã tìm thấy cặp ngoặc đóng
         if (self.*.source[current] == '*' and expectNextChar(self, '/')) {
@@ -224,6 +225,7 @@ fn moveCurrentToCloseCommentCharsPair(self: *Self) LexecalError!void {
             column = 0;
         }
     } else {
+        try reportLexecalError(self, "Unterminated comment");
         return LexecalError.UnterminatedComment;
     }
 }
@@ -241,9 +243,45 @@ fn specifyAlphabeticToken(literal: []const u8) Token {
 }
 
 // Báo cáo lỗi trong quá trình lexing (xuất ra dòng bị lỗi, chỉ ra cụ thể token đang bị lỗi)
-// fn reportLexecalError() !void {
-//     try stdout.
-// }
+fn reportLexecalError(self: *Self, message: []const u8) !void {
+    try stdout.print("Error: {s}\n", .{message});
+    try stdout.print("Line {}, column {}:\n", .{line, column});
+
+    // Lấy ra dòng đang xét chứa token bị lỗi
+
+    var b_index: usize = start; // backward index from start
+    // Vòng lặp để lấy ra đoạn code ở phía trước ký tự ở vị trí start nếu start != 0
+    while (b_index > 0 and self.*.source[b_index] != '\n') {
+        b_index -= 1;   // biến đếm đi ngược cho đến khi gặp char `\n`
+        // Nếu đã chạm đến ký tự xuống dòng
+        if (self.*.source[b_index] == '\n') {
+            b_index += 1;   // Trả lại vị trí phía sau để tránh lấy nhầm index ở ký tự `\n`
+            break;
+        }
+    } 
+
+    var f_index: usize = start; // forward index from start
+    // Vòng lặp để lấy ra đoạn code ở phía sau ký tự ở vị trí start
+    while (f_index < self.*.source.len and self.*.source[f_index] != '\n') {
+        if (f_index == self.*.source.len) break;    // Thoát vòng lặp
+        f_index += 1;
+    }
+    const current_line: []const u8 = self.*.source[b_index .. f_index];
+
+    // Xuất ra line và chỉ ra vị trí bị lỗi trong line
+    try stdout.print("\t{s}\n", .{current_line});
+    try stdout.print("\t", .{});
+    var pointed_error: bool = false;
+    for (current_line) |char| {
+        if (char == self.*.source[start] and !pointed_error) {
+            try stdout.print("^", .{});
+            pointed_error = true;
+        } else {
+            try stdout.print("~", .{});
+        }
+    }
+    try stdout.print("\n", .{});
+}
 
 // Map chứa key - value của tất cả keyword trong lumin
 const keywords_map: StaticStringMap(TokenType) = StaticStringMap(TokenType).initComptime(
@@ -283,7 +321,8 @@ pub const LexecalError: type = error{
 
 test "Lexer test" {
     const sample_source: []const u8 =
-        \\ 
+        \\var a;
+        \\func getData();@
     ;
 
     var lexer: Self = Self.init(std.testing.allocator, sample_source);
