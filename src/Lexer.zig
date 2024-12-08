@@ -34,12 +34,11 @@ pub fn deinit(self: *Self) void {
 // Hàm scan token
 pub fn scanToken(self: *Self) !void {
     // Vòng lặp lớn qua toàn bộ source code
-    while (!isAtEnd(self)) : (current += 1) { // vòng lặp tự tăng chỉ số current cho đến khi đến cuối source
+    while (isInBounds(self)) : (current += 1) { // vòng lặp tự tăng chỉ số current cho đến khi đến cuối source
         start = current; // Set start = current
-        const current_char: u8 = self.*.source[current];
 
         // Bắt đầu kiểm tra
-        switch (current_char) {
+        switch (self.*.source[current]) {
             // Nếu gặp phải khoảng trắng
             ' ' => {},  // Không hành động đối với khoảng trắng
             // Nếu gặp ký tự xuống dòng
@@ -155,11 +154,27 @@ pub fn scanToken(self: *Self) !void {
                     Token.init(.Percent, self.*.source[start .. current + 1], null, line, column);
                 try addToken(self, token);
             },
+
+            // Nếu literal bắt đầu bằng ký tự `'` -> có khẳ năng là character literal
+            // '\'' => {
+            //     // Tăng current cho đến khi gặp ký tự `'` tiếp theo
+            //     while (!isAtEnd(self) and self.*.source[current] != '\n') : (current += 1) {
+            //         // Trường hợp tìm thấy ký tự `'`
+            //         if (self.*.source[current] == '\'') {
+            //             const char_literal: []const u8 = self.*.source[current]
+            //         }
+            //     } else {
+            //         // trong trường hợp chưa tìm được ký tự `'` còn lại mà gặp phải ký tự xuống dòng
+            //         try reportLexecalError(self, "Illegal character literal");
+            //         return LexecalError.IlligalCharacterLiteral;
+            //     }
+            // },
+
             // Các trường hợp là các loại token khác như identifier keyword hoặc từ khoá
             else => {
                 if (ascii.isAlphabetic(self.*.source[current]) or self.*.source[current] == '_') {
                     // Trường hợp là chữ cái hoặc dấu `_` -> duyệt literal đó cho đến khi gặp các char không phải chữ cái, gạch dưới `_` hoặc chữ số
-                    while (!isAtEnd(self) and ascii.isAlphanumeric(self.*.source[current]) or self.*.source[current] == '_') {
+                    while (isInBounds(self) and ascii.isAlphanumeric(self.*.source[current]) or self.*.source[current] == '_') {
                         current += 1;
                     }
                     // Lấy ra literal vừa duyệt
@@ -179,14 +194,14 @@ pub fn scanToken(self: *Self) !void {
     }
 }
 
-// Hàm kiểm tra xem vị trí đang xét đã ở cuối của source hay chưa
-fn isAtEnd(self: *Self) bool {
-    return current >= self.*.source.len; // true -> nếu như đã ở cuối source
+// Hàm kiểm tra xem vị trí hiện tại có nằm trong vị trí có khả năng xét được hay không
+fn isInBounds(self: *Self) bool {
+    return current <= self.*.source.len - 1; // true -> nếu như vẫn còn năm trrong phạm vi có thể xét
 }
 
 // Hàm kiểm tra ký tự liền kề vị trí current (nếu vẫn chưa duyệt đến cuối source) nếu đúng với ký tự đang dự đoán thì sẽ tự tăng current lên 1
 fn expectNextChar(self: *Self, expect_char: u8) bool {
-    if (current < self.*.source.len - 1 and self.*.source[current + 1] == expect_char) {
+    if (isInBounds(self) and self.*.source[current + 1] == expect_char) {
         current += 1;
         return true;
     } else {
@@ -203,7 +218,7 @@ fn addToken(self: *Self, token: Token) !void {
 // hàm chuyển nhanh biến đếm current đến ký tự xuống dòng gần nhất
 fn moveCurrentToEndOfLine(self: *Self) void {
     // Tăng biến current cho đến khi gặp được ký tự xuống dòng
-    while (!isAtEnd(self)) : (current += 1) {
+    while (isInBounds(self)) : (current += 1) {
         if (self.*.source[current] == '\n') {
             line += 1;  // Tăng số thứ tự dòng lên 1
             break;
@@ -213,7 +228,9 @@ fn moveCurrentToEndOfLine(self: *Self) void {
 
 // Hàm tìm và chuyển nhanh đến cặp ký tự đóng comment `*/`
 fn moveCurrentToCloseCommentCharsPair(self: *Self) !void {
-    while (!isAtEnd(self)) : (current += 1) {
+    current += 1;   // Tăng thủ công current lên 1 
+    // Đảm bảo chỉ khi có tồn tạo cặp dấu */ ở phần sau của source thì mới tiến hành 
+    while (isInBounds(self)) : (current += 1) {
         // Khi đã tìm thấy cặp ngoặc đóng
         if (self.*.source[current] == '*' and expectNextChar(self, '/')) {
             // Thoát vòng lặp nếu tìm ra cặp đấu đóng comment
@@ -224,7 +241,9 @@ fn moveCurrentToCloseCommentCharsPair(self: *Self) !void {
             line += 1;
             column = 0;
         }
-    } else {
+    }
+    // Thông báo lỗi không đóng comment khi đã vượt ngoài phạm vi source
+    if (!isInBounds(self)) {
         try reportLexecalError(self, "Unterminated comment");
         return LexecalError.UnterminatedComment;
     }
@@ -248,7 +267,6 @@ fn reportLexecalError(self: *Self, message: []const u8) !void {
     try stdout.print("Line {}, column {}:\n", .{line, column});
 
     // Lấy ra dòng đang xét chứa token bị lỗi
-
     var b_index: usize = start; // backward index from start
     // Vòng lặp để lấy ra đoạn code ở phía trước ký tự ở vị trí start nếu start != 0
     while (b_index > 0 and self.*.source[b_index] != '\n') {
@@ -322,7 +340,7 @@ pub const LexecalError: type = error{
 test "Lexer test" {
     const sample_source: []const u8 =
         \\var a;
-        \\func getData();@
+        \\const/**/c;
     ;
 
     var lexer: Self = Self.init(std.testing.allocator, sample_source);
