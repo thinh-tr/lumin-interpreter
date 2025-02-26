@@ -1,36 +1,156 @@
 const std = @import("std");
-const stdout = std.io.getStdOut().writer();
-const TokenType = @import("./TokenType.zig").TokenType;
+const StaticStringMap = std.StaticStringMap;
 
-const Self: type = @This(); // const self của kiểu Token
+// Kiểu Token
+pub const Token = struct {
+    token_type: TokenType,    // Loại token
+    value: ?TokenValue, // Giá trị của token
+    line: u128, // Vị trí dòng
+    column: u128,   // Vị trí cột
 
-// Struct lưu thông tin Token
-token_type: TokenType, // Loại token
-lexeme: []const u8, // lexeme của token
-literal_value: ?LiteralValue, // giá trị literal có thể có của token
-line: u128, // vị trí dòng của token trong source code
-column: u128, // vị trí cột bắt đầu của token
+    const Self = @This();
 
-// Khởi tạo token
-pub fn init(token_type: TokenType, lexeme: []const u8, literal_value: ?LiteralValue, line: u128, column: u128) Self {
-    return Self{
-        .token_type = token_type,
-        .lexeme = lexeme,
-        .literal_value = literal_value,
-        .line = line,
-        .column = column,
-    };
-}
+    pub fn init(token_type: TokenType, value: ?TokenValue, line: u128, column: u128) Token {
+        return Token{
+            .token_type = token_type,
+            .value = value,
+            .line = line,
+            .column = column,
+        };
+    }
 
-pub fn toString(self: Self) !void {
-    try stdout.print("Type: {any}, lexeme: \"{s}\", value: {any}, line: {d}, column: {d}\n", .{ self.token_type, self.lexeme, self.literal_value, self.line, self.column });
-}
-
-// Union type lưu thông tin Literal(chuỗi, số, ký tự,...) của một token nếu có
-pub const LiteralValue: type = union {
-    int: i128,
-    float: f128,
-    boolean: bool,
-    string: []const u8,
-    char: u8,
+    pub fn toString(self: *Self) void {
+        std.debug.print("TokenType: {}, Value: {?}, Line: {}, Column: {}\n", .{self.*.token_type, self.*.value, self.*.line, self.*.column});
+    }
 };
+
+// struct chứa token value
+pub const TokenValue = union(TokenValueTag) {
+    Char: u8,
+    String: []const u8,
+    Bool: bool,
+    Int: i128,
+    Float: f128,
+};
+
+// Tag cho TokenValue
+pub const TokenValueTag = enum {
+    Char,
+    String,
+    Bool,
+    Int,
+    Float,
+};
+
+// TokenType enum (phân loại các kiểu token)
+pub const TokenType = enum {
+    // Từ khoá
+    In, // `in`
+    Fn, // `function`
+    If, // `if`
+    Else, // `else`
+    For, // `for`
+    While, // `while`
+    Do, // `do`
+    And, // `And logic`
+    Or, // `Or logic`
+    Var, // `var`
+    Const, // `constant`
+    This, // `this`
+    Class,  // `class`
+    Union, // `union`
+    Error, // `error`
+    Enum, // `enum`
+    Null, // `null`
+    True, // `true`
+    False, // `false`
+    Return, // `return`
+    Throw,    // 'return!'
+
+    // Toán tử
+    Circumflex, // `^` (toán tử dành cho số mũ)
+    Bang, // `!`
+    BangEqual, // `!=`
+    Equal, // `=`
+    EqualEqual, // `==`
+    Greater, // `>`
+    GreaterEqual, // `>=`
+    Lesser, // `<`
+    LesserEqual, // `<=`
+    Plus, // `+`
+    PlusEqual, // `+=`
+    Minus, // `-`
+    MinusEqual, // `-=`
+    Star, // `*`
+    StarEqual, // `*=`
+    Slash, // `/`
+    SlashEqual, // `/=`
+    Percent, // `%`
+    PercentEqual, // `%=`
+
+    // Toán tử đặc biệt
+    LambdaArrow, // `=>`
+
+    // Dấu phân tách (Delimeter)
+    LeftPaten, // `(`
+    RightPaten, // `)`
+    LeftBrace, // `{`
+    RightBrace, // `}`
+    Comma, // `,`
+    Dot, // `.`
+    Colon, // `:`
+    Semicolon, // `;`
+    LeftSquareBracket, // `[`
+    RightSquareBracket, // `]`
+
+    // Định danh (bắt đầu bằng chữ cái hoặc `_`)
+    Identifier, // Định danh
+
+    // Gía trị hằng số (Literal)
+    StringLiteral, // String literal
+    CharLiteral, // Character literal
+    IntLiteral, // Integer literal
+    FloatLiteral, // Floating point literal
+
+    // Chú thích
+    SinglelineComment, // `//`
+    MultiplelineComment, // `/*...*/`    
+};
+
+// Keyword Map
+pub const KeywordMap: StaticStringMap(TokenType) = StaticStringMap(TokenType).initComptime(.{
+    .{"in", .In},
+    .{"fn", .Fn},
+    .{"if", .If},
+    .{"else", .Else},
+    .{"for", .For},
+    .{"while", .White},
+    .{"do", .Do},
+    .{"and", .And},
+    .{"or", .Or},
+    .{"var", .Var},
+    .{"const", .Const},
+    .{"this", .This},
+    .{"class", .Class},
+    .{"union", .Union},
+    .{"error", .Error},
+    .{"enum", .Enum},
+    .{"null", .Null},
+    .{"true", .True},
+    .{"false", .False},
+    .{"return", .Return},
+    .{"throw", .Throw},
+});
+
+// Các lỗi có thể có khi Lex token
+pub const LexingError = error {
+    UndefinedToken, // Lỗi token không xác định
+    InvalidStringLiteral,   // Lỗi string literal
+    InvalidCharLiteral, // Lỗi char literal
+    InvalidNumberLiteral,   // Lỗi number literal
+};
+
+test "Token init test" {
+    var float_token = Token.init(TokenType.FloatLiteral, TokenValue{.Float = 123.43}, 1, 1);
+    float_token.toString();
+}
