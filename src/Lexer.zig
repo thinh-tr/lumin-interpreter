@@ -39,11 +39,14 @@ fn nextChar(self: *Self) ?u8 {
 }
 
 // Hàm lấy ra char ở pos hiện tại
-fn peekChar(self: *Self) ?u8 {
-    if (pos >= self.*.source.len) return null;
-    const char: u8 = self.*.source[pos];
-    pos += 1;   // Tăng pos lên 1
-    return char;
+fn expectNextChar(self: *Self, expected_char: u8) bool {
+    if (pos >= self.*.source.len) return false; // Trả ra false nếu đã vượt ra ngoài source
+    if (self.*.source[pos] == expected_char) {
+        pos += 1;   // Tăng pos lên 1
+        return true;
+    } else {
+        return false;
+    }
 }
 
 // Hàm thêm token
@@ -92,13 +95,13 @@ fn lexCharacterToken(self: *Self, char: u8) ?Token {
             return Token.init(TokenType.Circumflex, null, line, column);
         },
         '!' => {
-            if (peekChar(self) == '=') {
+            if (expectNextChar(self, '=')) {
                 return Token.init(TokenType.BangEqual, null, line, column);
             }
             return Token.init(TokenType.Bang, null, line, column);
         },
         '=' => {
-            if (peekChar(self) == '=') {
+            if (expectNextChar(self, '=')) {
                 return Token.init(TokenType.EqualEqual, null, line, column);
             }
             return Token.init(TokenType.Equal, null, line, column);
@@ -136,11 +139,13 @@ fn lexToken(self: *Self) !void {
 
 test "Lexer test" {
     const source: []const u8 = 
-        \\;
-        \\;;
+        \\![
+        \\!==
     ;
     var lexer = Self.init(std.heap.page_allocator, source);
     defer lexer.deinit();
     try lexer.lexToken();
-    std.debug.print("{any}", .{lexer.tokens.items});
+    for (lexer.tokens.items) |token| {
+        std.debug.print("{any}\n", .{token});
+    }
 }
