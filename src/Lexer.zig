@@ -2,10 +2,12 @@ const std = @import("std");
 const ArrayList = std.ArrayList;
 const Token = @import("./token.zig").Token;
 const TokenType = @import("./token.zig").TokenType;
+const TokenValue = @import("./token.zig").TokenValue;
 const Allocator = std.mem.Allocator;
 const stdout = std.io.getStdOut().writer();
 const ascii = std.ascii;
 const LexicalError = @import("./token.zig").LexicalError;
+const KeywordMap = @import("./token.zig").KeywordMap;
 
 const Self: type = @This(); // Tham chiếu đến kiểu Lexer
 
@@ -184,18 +186,35 @@ fn lexCharacterToken(self: *Self, char: u8) ?Token {
     }
 }
 
+// Hàm lex các token bắt đầu bằng chữ cái
+fn lexAlphabeticToken(self: *Self) Token {
+    // Nếu gặp phải ký tự thuộc bản chữ cái thì sẽ xét tất cả các ký tự Alphanumeric liền kề còn lại để tạo thành Token
+    const start_pos: usize = pos - 1;   // vị trí bắt đầu của token này pos - 1 là vị trí của char đang xét
+    while (pos < self.*.source.len and ascii.isAlphanumeric(self.*.source[pos]) or self.*.source[pos] == '_') {
+        pos += 1;
+    }
+    const token_lexeme: []const u8 = self.*.source[start_pos..pos];  // pos - 1 là vị trí của char đang xét
+
+    // Kiểm tra xem token tìm được có phải là từ khoá hay không
+    if (KeywordMap.has(token_lexeme)) {
+        return Token.init(KeywordMap.get(token_lexeme).?, null, line, column);    // Trả ra token chứa keyword tìm được
+    }
+    return Token.init(TokenType.Identifier, TokenValue{.String = token_lexeme}, line, column);
+}
+
 // Hàm scan tuyến tính source từ đầu đến cuối
 fn lexToken(self: *Self) !void {
     // Vòng lặp này tự thoát khi nextChar trả ra null -> đã đến cuối source
     while (nextChar(self)) |char| {
+        if (char == ' ') continue;  // Lặp lại vòng lặp nếu gặp khoảng trắng
         // Nếu gặp phải chr xuống dòng
         if (char == '\n') {
             line += 1;  // tăng line lên 1
             column = 0; // reset column về 0
             start_of_line_pos = pos;
-        } else if (ascii.isAlphabetic(char)) {
-            // Trường hợp char là chữ cái -> keyword, identifier
-
+        } else if (ascii.isAlphabetic(char) or char == '_') {
+            // Trường hợp char là chữ cái hoặc dấu gạch dưới -> keyword, identifier
+            try addToken(self, lexAlphabeticToken(self));
         } else if (ascii.isDigit(char)) {
             // Trường hợp char là chữ số -> number lexeme
 
@@ -214,13 +233,14 @@ fn lexToken(self: *Self) !void {
 
 test "Lexer test" {
     const source: []const u8 = 
-        \\***+*
-        \\()()
+        \\true or false;
     ;
     var lexer = Self.init(std.heap.page_allocator, source);
     defer lexer.deinit();
     try lexer.lexToken();
-    for (lexer.tokens.items) |token| {
-        std.debug.print("{any}\n", .{token});
+    for (lexer.tokens.items) |*token| {
+        //std.debug.print("{any}\n", .{token});
+        token.*.toString();
     }
+    try std.testing.expect(lexer.tokens.items.len == 4);
 }

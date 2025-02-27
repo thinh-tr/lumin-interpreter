@@ -20,7 +20,27 @@ pub const Token = struct {
     }
 
     pub fn toString(self: *Self) void {
-        std.debug.print("TokenType: {}, Value: {?}, Line: {}, Column: {}\n", .{self.*.token_type, self.*.value, self.*.line, self.*.column});
+        if (self.value) |value| {
+            switch (value) {
+                TokenValue.Char => {
+                    std.debug.print("TokenType: {}, Value: {c}, Line: {}, Column: {}\n", .{self.*.token_type, self.*.value.?.Char, self.*.line, self.*.column});
+                },
+                TokenValue.String => {
+                    std.debug.print("TokenType: {}, Value: {s}, Line: {}, Column: {}\n", .{self.*.token_type, self.*.value.?.String, self.*.line, self.*.column});
+                },
+                TokenValue.Bool => {
+                    std.debug.print("TokenType: {}, Value: {}, Line: {}, Column: {}\n", .{self.*.token_type, self.*.value.?.Bool, self.*.line, self.*.column});
+                },
+                TokenValue.Int => {
+                    std.debug.print("TokenType: {}, Value: {}, Line: {}, Column: {}\n", .{self.*.token_type, self.*.value.?.Int, self.*.line, self.*.column});
+                },
+                TokenValue.Float => {
+                    std.debug.print("TokenType: {}, Value: {}, Line: {}, Column: {}\n", .{self.*.token_type, self.*.value.?.Float, self.*.line, self.*.column});
+                },
+            }
+        } else {
+            std.debug.print("TokenType: {}, Value: {any}, Line: {}, Column: {}\n", .{self.*.token_type, self.*.value, self.*.line, self.*.column});
+        }
     }
 };
 
@@ -124,7 +144,7 @@ pub const KeywordMap: StaticStringMap(TokenType) = StaticStringMap(TokenType).in
     .{"if", .If},
     .{"else", .Else},
     .{"for", .For},
-    .{"while", .White},
+    .{"while", .While},
     .{"do", .Do},
     .{"and", .And},
     .{"or", .Or},
@@ -149,8 +169,3 @@ pub const LexicalError = error {
     InvalidCharLiteral, // Lỗi char literal
     InvalidNumberLiteral,   // Lỗi number literal
 };
-
-test "Token init test" {
-    var float_token = Token.init(TokenType.FloatLiteral, TokenValue{.Float = 123.43}, 1, 1);
-    float_token.toString();
-}
