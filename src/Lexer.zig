@@ -5,7 +5,7 @@ const TokenType = @import("./token.zig").TokenType;
 const Allocator = std.mem.Allocator;
 const stdout = std.io.getStdOut().writer();
 const ascii = std.ascii;
-const LexingError = @import("./token.zig").LexingError;
+const LexicalError = @import("./token.zig").LexicalError;
 
 const Self: type = @This(); // Tham chiếu đến kiểu Lexer
 
@@ -16,6 +16,9 @@ tokens: ArrayList(Token), // List chứa token đã được scan
 var pos: usize = 0; // vị trí đang xét
 var line: u128 = 1; // Vị trí dòng của lexeme đang xét
 var column: u128 = 0; // Vị trí column của token đang xét
+
+// Biến lấy vị trí của ký tự đầu tiên mỗi lần đến một dòng mới -> Giúp hàm thông báo xuất ra dòng bị lỗi
+var start_of_line_pos: usize = 0;
 
 // Khởi tạo Lexer (Allocator tuỳ ý)
 pub fn init(allocator: Allocator, source: []const u8) Self {
@@ -53,6 +56,29 @@ fn expectNextChar(self: *Self, expected_char: u8) bool {
 fn addToken(self: *Self, token: Token) !void {
     try self.*.tokens.append(token);
     column += 1;
+}
+
+// Hàm báo lỗi khi phát hiện token không hợp lệ
+fn reportLexicalError(self: *Self, lexical_error: LexicalError) !void {
+    // Thông báo lỗi    
+    // Lấy ra vị trí cuối cùng của line chứa token bị lỗi
+    var end_of_line_pos: usize = pos; // set bằng với vị trí hiện tại
+    while (end_of_line_pos < self.*.source.len and self.*.source[end_of_line_pos] != '\n') {
+        end_of_line_pos += 1;
+    }
+    const err_source_line: []const u8 = self.*.source[start_of_line_pos..end_of_line_pos];
+
+    try stdout.print("Error line {}:{} -> {!}\n", .{line, column, lexical_error});
+    try stdout.print("\t{s}\n\t", .{err_source_line});
+    for (start_of_line_pos..end_of_line_pos) |i| {
+        const pos_of_current_char: usize = pos - 1; // Trừ 1 để tránh việc hiển thị con trỏ bị lệch vì pos đã ở vị trí tiếp theo :)
+        if (pos_of_current_char == i) {
+            try stdout.print("^", .{});
+        } else {
+            try stdout.print(" ", .{});
+        }
+    }
+    try stdout.print("\n", .{});
 }
 
 // Hàm lex các Token bao gồm các ký tự và dấu phân tách
@@ -104,7 +130,52 @@ fn lexCharacterToken(self: *Self, char: u8) ?Token {
             if (expectNextChar(self, '=')) {
                 return Token.init(TokenType.EqualEqual, null, line, column);
             }
+            if (expectNextChar(self, '>')) {
+                return Token.init(TokenType.LambdaArrow, null, line, column);
+            }
             return Token.init(TokenType.Equal, null, line, column);
+        },
+        '>' => {
+            if (expectNextChar(self, '=')) {
+                return Token.init(TokenType.GreaterEqual, null, line, column);
+            }
+            return Token.init(TokenType.Greater, null, line, column);
+        },
+        '<' => {
+            if (expectNextChar(self, '=')) {
+                return Token.init(TokenType.LesserEqual, null, line, column);
+            }
+            return Token.init(TokenType.Lesser, null, line, column);
+        },
+        '+' => {
+            if (expectNextChar(self, '=')) {
+                return Token.init(TokenType.PlusEqual, null, line, column);
+            }
+            return Token.init(TokenType.Plus, null, line, column);
+        },
+        '-' => {
+            if (expectNextChar(self, '=')) {
+                return Token.init(TokenType.MinusEqual, null, line, column);
+            }
+            return Token.init(TokenType.Minus, null, line, column);
+        },
+        '*' => {
+            if (expectNextChar(self, '=')) {
+                return Token.init(TokenType.StarEqual, null, line, column);
+            }
+            return Token.init(TokenType.Star, null, line, column);
+        },
+        '/' => {
+            if (expectNextChar(self, '=')) {
+                return Token.init(TokenType.SlashEqual, null, line, column);
+            }
+            return Token.init(TokenType.Slash, null, line, column);
+        },
+        '%' => {
+            if (expectNextChar(self, '=')) {
+                return Token.init(TokenType.PercentEqual, null, line, column);
+            }
+            return Token.init(TokenType.Percent, null, line, column);
         },
 
         else => {
@@ -121,6 +192,7 @@ fn lexToken(self: *Self) !void {
         if (char == '\n') {
             line += 1;  // tăng line lên 1
             column = 0; // reset column về 0
+            start_of_line_pos = pos;
         } else if (ascii.isAlphabetic(char)) {
             // Trường hợp char là chữ cái -> keyword, identifier
 
@@ -132,6 +204,9 @@ fn lexToken(self: *Self) !void {
             if (lexCharacterToken(self, char)) |token| {
                 // Thêm Token vào list
                 try addToken(self, token);
+            } else {
+                try reportLexicalError(self, LexicalError.UndefinedToken);
+                return LexicalError.UndefinedToken;  // Trả ra error nếu không nhận diện được ký tự
             }
         }
     }
@@ -139,8 +214,8 @@ fn lexToken(self: *Self) !void {
 
 test "Lexer test" {
     const source: []const u8 = 
-        \\![
-        \\!==
+        \\***+*
+        \\()()
     ;
     var lexer = Self.init(std.heap.page_allocator, source);
     defer lexer.deinit();

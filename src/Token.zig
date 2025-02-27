@@ -143,7 +143,7 @@ pub const KeywordMap: StaticStringMap(TokenType) = StaticStringMap(TokenType).in
 });
 
 // Các lỗi có thể có khi Lex token
-pub const LexingError = error {
+pub const LexicalError = error {
     UndefinedToken, // Lỗi token không xác định
     InvalidStringLiteral,   // Lỗi string literal
     InvalidCharLiteral, // Lỗi char literal
