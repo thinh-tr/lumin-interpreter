@@ -240,7 +240,7 @@ fn lexToken(self: *Self) !void {
 
 test "Lexer test" {
     const source: []const u8 = 
-        \\var boolValue: bool = false;
+        \\var boolValue: bool = true;
     ;
     var lexer = Self.init(std.heap.page_allocator, source);
     defer lexer.deinit();
