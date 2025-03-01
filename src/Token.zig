@@ -32,10 +32,10 @@ pub const Token = struct {
                     std.debug.print("TokenType: {}, Value: {}, Line: {}, Column: {}\n", .{self.*.token_type, self.*.value.?.Bool, self.*.line, self.*.column});
                 },
                 TokenValue.Int => {
-                    std.debug.print("TokenType: {}, Value: {}, Line: {}, Column: {}\n", .{self.*.token_type, self.*.value.?.Int, self.*.line, self.*.column});
+                    std.debug.print("TokenType: {}, Value: {!?}, Line: {}, Column: {}\n", .{self.*.token_type, self.*.value.?.Int, self.*.line, self.*.column});
                 },
                 TokenValue.Float => {
-                    std.debug.print("TokenType: {}, Value: {}, Line: {}, Column: {}\n", .{self.*.token_type, self.*.value.?.Float, self.*.line, self.*.column});
+                    std.debug.print("TokenType: {}, Value: {!?}, Line: {}, Column: {}\n", .{self.*.token_type, self.*.value.?.Float, self.*.line, self.*.column});
                 },
             }
         } else {
@@ -49,8 +49,8 @@ pub const TokenValue = union(TokenValueTag) {
     Char: u8,
     String: []const u8,
     Bool: bool,
-    Int: i128,
-    Float: f128,
+    Int: std.fmt.ParseIntError!i128,
+    Float: std.fmt.ParseFloatError!f128,
 };
 
 // Tag cho TokenValue
@@ -66,7 +66,7 @@ pub const TokenValueTag = enum {
 pub const TokenType = enum {
     // Từ khoá
     In, // `in`
-    Fn, // `function`
+    Function, // `function`
     If, // `if`
     Else, // `else`
     For, // `for`
@@ -140,7 +140,7 @@ pub const TokenType = enum {
 // Keyword Map
 pub const KeywordMap: StaticStringMap(TokenType) = StaticStringMap(TokenType).initComptime(.{
     .{"in", .In},
-    .{"fn", .Fn},
+    .{"fn", .Function},
     .{"if", .If},
     .{"else", .Else},
     .{"for", .For},

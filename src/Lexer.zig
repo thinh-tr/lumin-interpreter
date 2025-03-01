@@ -190,7 +190,7 @@ fn lexCharacterToken(self: *Self, char: u8) ?Token {
 fn lexAlphabeticToken(self: *Self) Token {
     // Nếu gặp phải ký tự thuộc bản chữ cái thì sẽ xét tất cả các ký tự Alphanumeric liền kề còn lại để tạo thành Token
     const start_pos: usize = pos - 1;   // vị trí bắt đầu của token này pos - 1 là vị trí của char đang xét
-    while (pos < self.*.source.len and ascii.isAlphanumeric(self.*.source[pos]) or self.*.source[pos] == '_') {
+    while (pos < self.*.source.len and (ascii.isAlphanumeric(self.*.source[pos]) or self.*.source[pos] == '_')) {
         pos += 1;
     }
     const token_lexeme: []const u8 = self.*.source[start_pos..pos];  // pos - 1 là vị trí của char đang xét
@@ -210,6 +210,66 @@ fn lexAlphabeticToken(self: *Self) Token {
     return Token.init(TokenType.Identifier, TokenValue{.String = token_lexeme}, line, column);
 }
 
+// Hàm kiểm tra các token dạng chữ số -> có khả năng trả ra lỗi parseint hoặc parsefloat
+fn lexDigitToken(self: *Self) ?Token {
+    const start_pos: usize = pos - 1;
+    while (pos < self.*.source.len) : (pos += 1) {
+        if (!ascii.isDigit(self.*.source[pos]) and self.*.source[pos] != '.' and self.*.source[pos] != '_') {
+            break;
+        }
+    }
+    const token_lexeme: []const u8 = self.*.source[start_pos..pos];
+    if (isValidNumberLexeme(token_lexeme)) {
+        if (std.mem.indexOfScalar(u8, token_lexeme, '.') != null) {
+            // trường hợp là float
+            const float_value = std.fmt.parseFloat(f128, token_lexeme);
+            if (@TypeOf(float_value) == std.fmt.ParseFloatError) {
+                return null;
+            } else {
+                return Token.init(TokenType.FloatLiteral, TokenValue{.Float = float_value}, line, column);
+            }
+        } else {
+            // trường hợp là int
+            const int_value = std.fmt.parseInt(i128, token_lexeme, 10);
+            if (@TypeOf(int_value) == std.fmt.ParseIntError) {
+                return null;
+            } else {
+                return Token.init(TokenType.IntLiteral, TokenValue{.Int = int_value}, line, column);
+            }
+        }
+    } else {
+        return null;
+    }
+}
+
+// Hàm kiểm tra tính hợp lệ của Number literal
+fn isValidNumberLexeme(lexeme: []const u8) bool {
+    var has_dot: bool = false;  // đánh dấu nếu có dấu '.'
+    var pre_underscore: bool = false;   // đánh dấu nếu ký tự trước là '_'
+    
+    if (lexeme.len == 0) return false;
+    if (lexeme[lexeme.len - 1] == '_') return false;
+    if (lexeme[lexeme.len - 1] == '.') return false;
+
+    var i: usize = 0;
+    while (i < lexeme.len) : (i += 1) {
+        const c: u8 = lexeme[i];
+        if (c == '_') {
+            if (pre_underscore) return false;
+            pre_underscore = true;
+        } else if (c == '.') {
+            if (has_dot) return false;
+            has_dot = true;
+            pre_underscore = false;
+        } else if (ascii.isDigit(c)) {
+            pre_underscore = false;
+        } else {
+            return false;   // không hợp lệ nếu có ký tự lạ
+        }
+    }
+    return true;
+}
+
 // Hàm scan tuyến tính source từ đầu đến cuối
 fn lexToken(self: *Self) !void {
     // Vòng lặp này tự thoát khi nextChar trả ra null -> đã đến cuối source
@@ -224,7 +284,12 @@ fn lexToken(self: *Self) !void {
             try addToken(self, lexAlphabeticToken(self));
         } else if (ascii.isDigit(char)) {
             // Trường hợp char là chữ số -> number lexeme
-
+            if (lexDigitToken(self)) |token| {
+                try addToken(self, token);
+            } else {
+                try reportLexicalError(self, LexicalError.InvalidNumberLiteral);
+                return LexicalError.InvalidNumberLiteral;
+            }
         } else {
             // Các trường hợp còn lại -> Delimeter, ký tự đặc biệt,...
             if (lexCharacterToken(self, char)) |token| {
@@ -240,7 +305,7 @@ fn lexToken(self: *Self) !void {
 
 test "Lexer test" {
     const source: []const u8 = 
-        \\var boolValue: bool = true;
+        \\11.1
     ;
     var lexer = Self.init(std.heap.page_allocator, source);
     defer lexer.deinit();
@@ -249,5 +314,4 @@ test "Lexer test" {
         //std.debug.print("{any}\n", .{token});
         token.*.toString();
     }
-    //try std.testing.expect(lexer.tokens.items.len == 17);
 }
